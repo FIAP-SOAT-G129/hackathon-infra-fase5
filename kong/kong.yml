@@ -1,0 +1,45 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: auth-service
+    url: http://auth-service:8080
+    routes:
+      - name: auth-route
+        paths:
+          - /auth
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 10
+          policy: local
+      - name: file-log
+        config:
+          path: /dev/stdout
+
+  - name: video-service
+    url: http://video-service:80
+    routes:
+      - name: video-route
+        paths:
+          - /videos
+    plugins:
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+      - name: rate-limiting
+        config:
+          minute: 5
+          policy: local
+      - name: file-log
+        config:
+          path: /dev/stdout
+
+consumers:
+  - username: auth-user
+    jwt_secrets:
+      - key: "hackathon-issuer"
+        secret: "bolta-de-hackathon-estrera-mais-de-32-caracteres"
+        algorithm: HS256
