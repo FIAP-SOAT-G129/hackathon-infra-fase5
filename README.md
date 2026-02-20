@@ -1,14 +1,12 @@
-# 🌐 Fastfood — Infraestrutura e Orquestração
+# 🌐 Hackathon — Infraestrutura e Orquestração
 
-[![Release - Build, Quality Gate and Deploy](https://github.com/FIAP-SOAT-G129/hackathon-infra-fase5/actions/workflows/release.yml/badge.svg)](https://github.com/FIAP-SOAT-G129/hackathon-infra-fase5/actions/workflows/release.yml)
-
-Este repositório contém a **infraestrutura e orquestração completa** da aplicação **Fastfood**, utilizando **Docker Compose** para integrar os microserviços de Autenticação, Vídeo e o Worker de Processamento, juntamente com serviços de infraestrutura como PostgreSQL, RabbitMQ e Redis. O **Kong API Gateway** é utilizado para roteamento e segurança, protegendo as APIs com autenticação JWT.
+Este repositório contém a **infraestrutura e orquestração completa**, utilizando **Docker Compose** para integrar os microserviços de Autenticação, Vídeo e o Worker de Processamento, juntamente com serviços de infraestrutura como PostgreSQL, RabbitMQ e Redis. O **Kong API Gateway** é utilizado para roteamento e segurança, protegendo as APIs com autenticação JWT.
 
 ---
 
 ## 🧾 Objetivo do Projeto
 
-Orquestrar o ecossistema completo da aplicação Fastfood, provendo um ambiente de desenvolvimento e testes consistente e fácil de configurar. O objetivo é integrar todos os componentes da Fase 5 do Hackathon, garantindo a comunicação entre os serviços, a persistência de dados, a mensageria assíncrona e a segurança através de um API Gateway.
+Orquestrar o ecossistema completo da aplicação, provendo um ambiente de desenvolvimento e testes consistente e fácil de configurar. O objetivo é integrar todos os componentes da Fase 5 do Hackathon, garantindo a comunicação entre os serviços, a persistência de dados, a mensageria assíncrona e a segurança através de um API Gateway.
 
 > 📚 **Wiki do Projeto:** <br/> > https://github.com/FIAP-SOAT-G129/.github/wiki/Fase-5
 
@@ -28,7 +26,7 @@ Orquestrar o ecossistema completo da aplicação Fastfood, provendo um ambiente 
 
 ## 🧠 Arquitetura Geral
 
-A arquitetura do sistema Fastfood é baseada em microserviços, orquestrados pelo Docker Compose e expostos através do Kong API Gateway. O fluxo de requisições e processamento é o seguinte:
+A arquitetura do sistema é baseada em microserviços, orquestrados pelo Docker Compose e expostos através do Kong API Gateway. O fluxo de requisições e processamento é o seguinte:
 
 1.  **Kong API Gateway**: Ponto de entrada para todas as requisições externas, responsável por roteamento, balanceamento de carga, autenticação e outras políticas de API.
 2.  **Auth MS**: Microserviço de autenticação e autorização, gerencia usuários e emite tokens JWT.
@@ -56,10 +54,10 @@ Para acessar os serviços expostos, utilize as seguintes portas no seu `localhos
 
 O Kong API Gateway roteia as requisições para os microserviços internos e aplica políticas de segurança:
 
-| Caminho    | Serviço de Destino | Proteção JWT | Descrição                                      |
-|:-----------|:-------------------|:-------------|:-----------------------------------------------|
-| `/auth`    | `auth-ms`          | Não          | Rotas de autenticação (registro, login)        |
-| `/videos`  | `video-ms`         | Sim          | Rotas de gerenciamento de vídeos (requer token)|
+| Caminho   | Serviço de Destino | Proteção JWT | Descrição                                       |
+|:----------|:-------------------|:-------------|:------------------------------------------------|
+| `/auth`   | `auth-ms`          | Não          | Rotas de autenticação (registro, login)         |
+| `/videos` | `video-ms`         | Sim          | Rotas de gerenciamento de vídeos (requer token) |
 
 ---
 
@@ -84,6 +82,27 @@ O Kong interceptará a requisição, validará o JWT usando o segredo configurad
 
 As configurações dos serviços são definidas no `docker-compose.yml` e no `kong/kong.yml`. As variáveis de ambiente para os microserviços são passadas diretamente no `docker-compose.yml`.
 
+Caso deseje alterar, as principais variáveis de ambiente são:
+
+```env
+VIDEO_DB_NAME=video_db
+VIDEO_DB_USER=user
+VIDEO_DB_PASSWORD=my_password
+
+NOTIFICATION_MAIL_HOST=smtp.example.com
+NOTIFICATION_MAIL_PORT=587
+NOTIFICATION_MAIL_USERNAME=guest
+NOTIFICATION_MAIL_PASSWORD=guest
+
+AUTH_DB_NAME=auth_db
+AUTH_DB_USER=user
+AUTH_DB_PASSWORD=my_password
+
+JWT_SECRET=q3s6v9y$B&E)H@McQfTjWnZr4u7x!A%C
+JWT_EXPIRATION=360000
+JWT_ISSUER=hackathon-issuer
+```
+
 ### 🐳 Executando o ecossistema completo
 
 No terminal, navegue até a raiz deste repositório (`hackathon-infra-fase5`) e execute:
@@ -107,12 +126,6 @@ docker compose down
 ---
 
 ## 👥 Equipe
-
-- Daiana Menezes
-- Kelven Brandão
-- Luan Barbosa
-- Mario Mendonça
-- Thiago Dias
 
 Desenvolvido pela equipe **FIAP SOAT - G129** como parte do projeto de Arquitetura de Software.
 

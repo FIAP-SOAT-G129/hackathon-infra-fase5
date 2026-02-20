@@ -6,11 +6,11 @@ services:
     image: postgres:15-alpine
     container_name: postgres-auth
     environment:
-      POSTGRES_DB: auth_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${AUTH_DB_NAME:-auth_db}
+      POSTGRES_USER: ${AUTH_DB_USER:-user}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-password}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d auth_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-user} -d ${AUTH_DB_NAME:-auth_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,11 +21,11 @@ services:
     image: postgres:15-alpine
     container_name: postgres-video
     environment:
-      POSTGRES_DB: video_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${VIDEO_DB_NAME:-video_db}
+      POSTGRES_USER: ${VIDEO_DB_USER:-user}
+      POSTGRES_PASSWORD: ${VIDEO_DB_PASSWORD:-password}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d video_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${VIDEO_DB_USER:-user} -d ${VIDEO_DB_NAME:-video_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -75,10 +75,8 @@ services:
     volumes:
       - ./kong:/usr/local/kong/declarative
     depends_on:
-      auth-ms:
-        condition: service_healthy
-      video-ms:
-        condition: service_healthy
+      - auth-ms
+      - video-ms
     networks:
       - hackathon-network
 
@@ -87,22 +85,18 @@ services:
     image: lunpessoa/hackathon-auth-ms:latest
     container_name: auth-ms
     environment:
+      APP_PORT: 8080
       DB_HOST: postgres-auth
       DB_PORT: 5432
-      DB_NAME: auth_db
-      DB_USER: user
-      DB_PASSWORD: password
-      JWT_SECRET: q3s6v9y$B&E)H@McQfTjWnZr4u7x!A%C
-      JWT_EXPIRATION: 3600000
-      JWT_ISSUER: hackathon-issuer
+      DB_NAME: ${AUTH_DB_NAME:-auth_db}
+      DB_USER: ${AUTH_DB_USER:-user}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-password}
+      JWT_SECRET: ${JWT_SECRET:-MY_SUPER_SECRET_KEY}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
+      JWT_ISSUER: ${JWT_ISSUER:-hackathon-issuer}
     depends_on:
       postgres-auth:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
     networks:
       - hackathon-network
 
@@ -110,15 +104,25 @@ services:
     image: lunpessoa/hackathon-video-ms:latest
     container_name: video-ms
     environment:
+      APP_PORT: 8081
+      MAX_FILE_SIZE: 500MB
+      MAX_REQUEST_SIZE: 500MB
       DB_HOST: postgres-video
       DB_PORT: 5432
-      DB_NAME: video_db
-      DB_USER: user
-      DB_PASSWORD: password
+      DB_NAME: ${VIDEO_DB_NAME:-video_db}
+      DB_USER: ${VIDEO_DB_USER:-user}
+      DB_PASSWORD: ${VIDEO_DB_PASSWORD:-password}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      MAIL_HOST: ${NOTIFICATION_MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${NOTIFICATION_MAIL_PORT:-587}
+      MAIL_USERNAME: ${NOTIFICATION_MAIL_USERNAME:-guest}
+      MAIL_PASSWORD: ${NOTIFICATION_MAIL_PASSWORD:-guest}
+      VIDEOS_STORAGE_PATH: /app/storage/videos
+      ZIPS_STORAGE_PATH: /app/storage/zips
+      AUTH_URL: http://auth-ms:8080
     depends_on:
       postgres-video:
         condition: service_healthy
@@ -126,11 +130,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
     networks:
       - hackathon-network
 
@@ -138,11 +137,9 @@ services:
     image: lunpessoa/hackathon-video-processing-worker:latest
     container_name: worker
     environment:
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 5672
-      SPRING_RABBITMQ_USERNAME: guest
-      SPRING_RABBITMQ_PASSWORD: guest
-      APP_STORAGE_LOCAL_PATH: /app/temp_storage
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      LOCAL_STORAGE_PATH: /app/storage/zips
     depends_on:
       rabbitmq:
         condition: service_healthy
