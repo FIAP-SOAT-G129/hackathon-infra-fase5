@@ -1,162 +1,136 @@
-# API Gateway com Kong + Auth Service (Java)
+# 🌐 Hackathon — Infraestrutura e Orquestração
 
-## 📌 Visão Geral
-
-Este projeto demonstra a configuração e execução de um **API Gateway utilizando Kong**, integrado a um **Serviço de Autenticação em Java (Spring Boot)**, seguindo **Arquitetura Hexagonal**. A infraestrutura é orquestrada com **Docker Compose**.
+Este repositório contém a **infraestrutura e orquestração completa**, utilizando **Docker Compose** para integrar os microserviços de Autenticação, Vídeo e o Worker de Processamento, juntamente com serviços de infraestrutura como PostgreSQL, RabbitMQ e Redis. O **Kong API Gateway** é utilizado para roteamento e segurança, protegendo as APIs com autenticação JWT.
 
 ---
 
-## 🗂 Estrutura do Projeto
+## 🧾 Objetivo do Projeto
 
-```bash
-.
-├── auth-service/        # Serviço de Autenticação (Spring Boot + Arquitetura Hexagonal)
-├── kong/                # Configurações do Kong Gateway (kong.yml)
-├── docker-compose.yml   # Orquestração dos containers
-└── README.md
-```
+Orquestrar o ecossistema completo da aplicação, provendo um ambiente de desenvolvimento e testes consistente e fácil de configurar. O objetivo é integrar todos os componentes da Fase 5 do Hackathon, garantindo a comunicação entre os serviços, a persistência de dados, a mensageria assíncrona e a segurança através de um API Gateway.
 
-### Descrição dos componentes
+> 📚 **Wiki do Projeto:** <br/> > https://github.com/FIAP-SOAT-G129/.github/wiki/Fase-5
 
-* **auth-service/**: API responsável por cadastro, login e validação de usuários.
-* **kong/**: Contém o arquivo `kong.yml` com rotas e plugins (JWT, Rate Limit, etc.).
-* **docker-compose.yml**: Responsável por subir PostgreSQL, Kong Gateway e o Auth Service.
+---
+
+## 🚀 Tecnologias Utilizadas
+
+- **Docker** (Containerização)
+- **Docker Compose** (Orquestração de containers)
+- **Kong API Gateway** (Roteamento, gerenciamento de APIs e segurança)
+- **PostgreSQL** (Bancos de dados para Auth MS e Video MS)
+- **RabbitMQ** (Mensageria assíncrona para Video MS e Worker)
+- **Redis** (Cache para Video MS)
+- **Java 21 & Spring Boot 3** (Microserviços)
+
+---
+
+## 🧠 Arquitetura Geral
+
+A arquitetura do sistema é baseada em microserviços, orquestrados pelo Docker Compose e expostos através do Kong API Gateway. O fluxo de requisições e processamento é o seguinte:
+
+1.  **Kong API Gateway**: Ponto de entrada para todas as requisições externas, responsável por roteamento, balanceamento de carga, autenticação e outras políticas de API.
+2.  **Auth MS**: Microserviço de autenticação e autorização, gerencia usuários e emite tokens JWT.
+3.  **Video MS**: Microserviço de gerenciamento de vídeos, interage com PostgreSQL para metadados, Redis para cache e RabbitMQ para mensageria assíncrona com o Worker.
+4.  **Worker**: Consome mensagens do RabbitMQ, processa vídeos (extração de frames, compactação) e notifica o Video MS sobre o status do processamento.
+5.  **PostgreSQL**: Bancos de dados dedicados para Auth MS e Video MS.
+6.  **RabbitMQ**: Broker de mensagens para comunicação assíncrona entre Video MS e Worker.
+7.  **Redis**: Utilizado pelo Video MS para cache de informações.
 
 ---
 
 ## 🚦 Mapeamento de Portas
 
-Para facilitar o acesso aos serviços, utilize a tabela abaixo:
+Para acessar os serviços expostos, utilize as seguintes portas no seu `localhost`:
 
-| Serviço          | Porta Host | Descrição                                      |
-|------------------|------------|------------------------------------------------|
-| **Kong Proxy**   | `8000`     | **Ponto de entrada do API Gateway**            |
-| **Kong Admin**   | `8001`     | API de administração do Kong                   |
-| **Auth Service** | `8080`     | Acesso direto ao microserviço de Autenticação  |
-| **Video Service**| `8081`     | Acesso direto ao microserviço de Vídeos        |
-
-> **Importante:** Quando você acessa `http://localhost:8080`, você está falando diretamente com o `auth-service`. Para passar pelo **Kong Gateway**, você deve utilizar a porta `8000`.
+| Serviço                 | Porta Host | Descrição                                      |
+|:------------------------|:-----------|:-----------------------------------------------|
+| **Kong Proxy**          | `8000`     | **Ponto de entrada do API Gateway**            |
+| **Kong Admin**          | `8001`     | API de administração do Kong                   |
+| **RabbitMQ Management** | `15672`    | Interface de gerenciamento do RabbitMQ         |
 
 ---
 
 ## 🛣 Rotas do API Gateway (Kong)
 
-Através da porta **8000**, o Kong roteia as requisições da seguinte forma:
+O Kong API Gateway roteia as requisições para os microserviços internos e aplica políticas de segurança:
 
-| Caminho    | Serviço de Destino | Descrição                              |
-|------------|--------------------|----------------------------------------|
-| `/auth`    | `auth-service`     | Rotas de autenticação (login/register) |
-| `/videos`  | `video-service`    | Rotas de gerenciamento de vídeos       |
-
-**Exemplos de acesso:**
-*   **Autenticação:** `http://localhost:8000/auth/login`
-*   **Vídeos:** `http://localhost:8000/videos` (Requer JWT)
+| Caminho   | Serviço de Destino | Proteção JWT | Descrição                                       |
+|:----------|:-------------------|:-------------|:------------------------------------------------|
+| `/auth`   | `auth-ms`          | Não          | Rotas de autenticação (registro, login)         |
+| `/videos` | `video-ms`         | Sim          | Rotas de gerenciamento de vídeos (requer token) |
 
 ---
 
-## ▶️ Como Executar o Projeto
+## 🔐 Fluxo de Segurança com Kong e JWT
 
-### Pré-requisitos
+Todas as rotas do `video-ms` (`/videos`) são protegidas pelo plugin JWT do Kong. Para acessar essas rotas, o cliente deve:
 
-* Docker
-* Docker Compose
+1.  **Autenticar-se no Auth MS**: Enviar credenciais para `http://localhost:8000/auth/login` para obter um token JWT.
+2.  **Incluir o JWT nas Requisições**: O token JWT deve ser enviado no cabeçalho `Authorization` como `Bearer <seu_token>` para as rotas do `video-ms` (ex: `http://localhost:8000/videos/...`).
+
+O Kong interceptará a requisição, validará o JWT usando o segredo configurado (`q3s6v9y$B&E)H@McQfTjWnZr4u7x!A%C`) e, se válido, encaminhará a requisição para o `video-ms`.
 
 ---
 
-### Passo 1: Subir a Infraestrutura
+## ⚙️ Como Rodar o Projeto
 
-Na raiz do projeto, execute:
+### ✅ Pré-requisitos
+- `Docker`
+- `Docker Compose`
+
+### 🔧 Configuração
+
+As configurações dos serviços são definidas no `docker-compose.yml` e no `kong/kong.yml`. As variáveis de ambiente para os microserviços são passadas diretamente no `docker-compose.yml`.
+
+Caso deseje alterar, as principais variáveis de ambiente são:
+
+```env
+VIDEO_DB_NAME=video_db
+VIDEO_DB_USER=user
+VIDEO_DB_PASSWORD=my_password
+
+NOTIFICATION_MAIL_HOST=smtp.example.com
+NOTIFICATION_MAIL_PORT=587
+NOTIFICATION_MAIL_USERNAME=guest
+NOTIFICATION_MAIL_PASSWORD=guest
+
+AUTH_DB_NAME=auth_db
+AUTH_DB_USER=user
+AUTH_DB_PASSWORD=my_password
+
+JWT_SECRET=q3s6v9y$B&E)H@McQfTjWnZr4u7x!A%C
+JWT_EXPIRATION=360000
+JWT_ISSUER=hackathon-issuer
+```
+
+### 🐳 Executando o ecossistema completo
+
+No terminal, navegue até a raiz deste repositório (`hackathon-infra-fase5`) e execute:
 
 ```bash
-docker compose up -d
+docker compose up --build -d
 ```
 
-Esse comando irá iniciar:
+Este comando irá:
+- Construir as imagens dos microserviços (se necessário) ou puxá-las do DockerHub.
+- Iniciar todos os serviços (PostgreSQL, RabbitMQ, Redis, Auth MS, Video MS, Worker, Kong) na ordem correta, aguardando a saúde de cada dependência.
 
-* PostgreSQL
-* Kong Gateway
-* Auth Service (Java)
+#### ⏹️ Parando os containers
 
----
-
-### Passo 2: Verificar o Kong Gateway
-
-O Kong carrega automaticamente as configurações definidas em `kong/kong.yml`.
-
-Para validar se os serviços e rotas foram criados corretamente, acesse a **API de Administração do Kong**:
-
-```
-http://localhost:8001/services
-```
-
----
-
-## 🔐 Testando o Fluxo de Autenticação
-
-### 1️⃣ Cadastro de Usuário
+Para parar e remover todos os containers e redes criadas pelo Docker Compose, execute:
 
 ```bash
-curl -X POST http://localhost:8000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "usuario1",
-    "email": "user@test.com",
-    "password": "senha123"
-  }'
+docker compose down
 ```
 
 ---
 
-### 2️⃣ Login (Obter Token JWT)
+## 👥 Equipe
 
-```bash
-curl -X POST http://localhost:8000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "usuario1",
-    "password": "senha123"
-  }'
-```
-
-A resposta retornará um **JWT**, que será utilizado para acessar rotas protegidas.
+Desenvolvido pela equipe **FIAP SOAT - G129** como parte do projeto de Arquitetura de Software.
 
 ---
 
-### 3️⃣ Acessar Rota Protegida
+## 📄 Licença
 
-Substitua `<TOKEN_AQUI>` pelo token recebido no login:
-
-```bash
-curl -H "Authorization: Bearer <TOKEN_AQUI>" \
-  http://localhost:8000/auth/me
-```
-
----
-
-## 🧠 Detalhes da Implementação
-
-### 🧱 Arquitetura
-
-* **Arquitetura Hexagonal (Ports and Adapters)**:
-
-    * **Domínio**: regras de negócio
-    * **Aplicação**: casos de uso
-    * **Adaptadores**: Web (REST) e Persistência (Banco)
-
-### 🔐 Segurança
-
-* O **Kong valida o JWT** antes de encaminhar a requisição para o microserviço.
-* O Auth Service recebe apenas requisições autenticadas.
-
-### 🚦 Rate Limit
-
-* Configurado no Kong
-* Limite: **10 requisições por minuto** para o serviço de autenticação
-
----
-
-## ✅ Observações Finais
-
-* Todas as chamadas externas devem passar pelo **API Gateway (porta 8000)**.
-* A API de administração do Kong fica disponível na **porta 8001**.
-* Este projeto serve como base para arquiteturas de **microserviços com gateway centralizado**.
+Este projeto é parte de um trabalho acadêmico da FIAP.

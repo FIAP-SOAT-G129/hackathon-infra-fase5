@@ -2,8 +2,8 @@ _format_version: "3.0"
 _transform: true
 
 services:
-  - name: auth-service
-    url: http://auth-service:8080
+  - name: auth-ms
+    url: http://auth-ms:8080
     routes:
       - name: auth-route
         paths:
@@ -12,18 +12,16 @@ services:
     plugins:
       - name: rate-limiting
         config:
-          minute: 10
+          minute: 20
           policy: local
-      - name: file-log
-        config:
-          path: /dev/stdout
 
-  - name: video-service
-    url: http://video-service:80
+  - name: video-ms
+    url: http://video-ms:8081
     routes:
       - name: video-route
         paths:
           - /videos
+        strip_path: false
     plugins:
       - name: jwt
         config:
@@ -31,15 +29,12 @@ services:
             - exp
       - name: rate-limiting
         config:
-          minute: 5
+          minute: 10
           policy: local
-      - name: file-log
-        config:
-          path: /dev/stdout
 
 consumers:
-  - username: auth-user
+  - username: hackathon-user
     jwt_secrets:
       - key: "hackathon-issuer"
-        secret: "bolta-de-hackathon-estrera-mais-de-32-caracteres"
+        secret: "q3s6v9y$B&E)H@McQfTjWnZr4u7x!A%C"
         algorithm: HS256
