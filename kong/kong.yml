@@ -36,5 +36,5 @@ consumers:
   - username: hackathon-user
     jwt_secrets:
       - key: "hackathon-issuer"
-        secret: "q3s6v9y$B&E)H@McQfTjWnZr4u7x!A%C"
+        secret: "minha-super-secret-key-hackathon-2026-very-secure"
         algorithm: HS256
