@@ -10,3 +10,6 @@
 *.local.*
 !*.sample
 !*.sample.*
+
+.idea/
+*.iml
