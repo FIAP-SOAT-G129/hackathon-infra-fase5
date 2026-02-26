@@ -68,7 +68,7 @@ Todas as rotas do `video-ms` (`/videos`) são protegidas pelo plugin JWT do Kong
 1.  **Autenticar-se no Auth MS**: Enviar credenciais para `http://localhost:8000/auth/login` para obter um token JWT.
 2.  **Incluir o JWT nas Requisições**: O token JWT deve ser enviado no cabeçalho `Authorization` como `Bearer <seu_token>` para as rotas do `video-ms` (ex: `http://localhost:8000/videos/...`).
 
-O Kong interceptará a requisição, validará o JWT usando o segredo configurado (`q3s6v9yB8E2HMcQfTjWnZr4u7x1A9CkLp`) e, se válido, encaminhará a requisição para o `video-ms`.
+O Kong interceptará a requisição, validará o JWT usando o segredo configurado (`qAkwER/knmSv1FZ0qzH+E9EEj5YsLn5zm9M/fY8RH9c=`) e, se válido, encaminhará a requisição para o `video-ms`.
 
 ---
 
@@ -98,7 +98,7 @@ AUTH_DB_NAME=auth_db
 AUTH_DB_USER=user
 AUTH_DB_PASSWORD=my_password
 
-JWT_SECRET=q3s6v9yB8E2HMcQfTjWnZr4u7x1A9CkLp
+JWT_SECRET=qAkwER/knmSv1FZ0qzH+E9EEj5YsLn5zm9M/fY8RH9c=
 JWT_EXPIRATION=360000
 JWT_ISSUER=hackathon-issuer
 ```
