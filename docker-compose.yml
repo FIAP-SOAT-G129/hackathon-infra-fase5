@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # --- Infraestrutura ---
@@ -10,7 +10,11 @@ services:
       POSTGRES_USER: ${AUTH_DB_USER:-user}
       POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-password}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-user} -d ${AUTH_DB_NAME:-auth_db}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${AUTH_DB_USER:-user} -d ${AUTH_DB_NAME:-auth_db}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,7 +29,11 @@ services:
       POSTGRES_USER: ${VIDEO_DB_USER:-user}
       POSTGRES_PASSWORD: ${VIDEO_DB_PASSWORD:-password}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${VIDEO_DB_USER:-user} -d ${VIDEO_DB_NAME:-video_db}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${VIDEO_DB_USER:-user} -d ${VIDEO_DB_NAME:-video_db}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -80,6 +88,27 @@ services:
     networks:
       - hackathon-network
 
+  kong-config:
+    image: curlimages/curl:latest
+    container_name: kong-config
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-MY_SUPER_SECRET_KEY}
+      JWT_ISSUER: ${JWT_ISSUER:-hackathon-auth-issuer}
+    depends_on:
+      kong:
+        condition: service_started
+    networks:
+      - hackathon-network
+    command: >
+      sh -c '
+      sleep 5 &&
+      curl -X POST http://kong:8001/consumers/hackathon-auth/jwt \
+        -d "key=$$JWT_ISSUER" \
+        -d "secret=$$JWT_SECRET" \
+        -d "algorithm=HS256"
+      '
+    restart: on-failure
+
   # --- Microserviços ---
   auth-ms:
     image: lunpessoa/hackathon-auth-ms:latest
@@ -92,8 +121,8 @@ services:
       DB_USER: ${AUTH_DB_USER:-user}
       DB_PASSWORD: ${AUTH_DB_PASSWORD:-password}
       JWT_SECRET: ${JWT_SECRET:-MY_SUPER_SECRET_KEY}
+      JWT_ISSUER: ${JWT_ISSUER:-hackathon-auth-issuer}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
-      JWT_ISSUER: ${JWT_ISSUER:-hackathon-issuer}
     depends_on:
       postgres-auth:
         condition: service_healthy
@@ -123,7 +152,11 @@ services:
       VIDEOS_STORAGE_PATH: /app/storage/videos
       ZIPS_STORAGE_PATH: /app/storage/zips
       AUTH_URL: http://auth-ms:8080
+    volumes:
+      - storage:/app/storage
     depends_on:
+      init-storage:
+        condition: service_completed_successfully
       postgres-video:
         condition: service_healthy
       rabbitmq:
@@ -140,11 +173,27 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       LOCAL_STORAGE_PATH: /app/storage/zips
+    volumes:
+      - storage:/app/storage
     depends_on:
+      init-storage:
+        condition: service_completed_successfully
       rabbitmq:
         condition: service_healthy
     networks:
       - hackathon-network
+
+  init-storage:
+    image: alpine
+    container_name: init-storage
+    command: sh -c "mkdir -p /app/storage/videos /app/storage/zips && chmod -R 777 /app/storage"
+    volumes:
+      - storage:/app/storage
+    networks:
+      - hackathon-network
+
+volumes:
+  storage:
 
 networks:
   hackathon-network:
