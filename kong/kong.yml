@@ -49,3 +49,7 @@ services:
 
 consumers:
   - username: hackathon-auth
+    jwt_secrets:
+      - key: hackathon-auth-issuer
+        secret: SDU3YkhHdzVtc0F6S0pYZzZ2TjFpZldSNHB5Ym5tY0M=
+        algorithm: HS256
