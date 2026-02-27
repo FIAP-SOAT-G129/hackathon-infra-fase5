@@ -5,10 +5,24 @@ services:
   - name: auth-ms
     url: http://auth-ms:8080
     routes:
-      - name: auth-route
+      - name: auth-login-route
         paths:
-          - /auth
+          - /auth/login
         strip_path: false
+      - name: auth-register-route
+        paths:
+          - /auth/register
+        strip_path: false
+      - name: auth-me-route
+        paths:
+          - /auth/me
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
     plugins:
       - name: rate-limiting
         config:
@@ -34,8 +48,8 @@ services:
           policy: local
 
 consumers:
-  - username: hackathon-user
+  - username: hackathon-auth
     jwt_secrets:
-      - key: hackathon-issuer
-        secret: q3s6v9yB8E2HMcQfTjWnZr4u7x1A9CkLp
+      - key: hackathon-auth-issuer
+        secret: SDU3YkhHdzVtc0F6S0pYZzZ2TjFpZldSNHB5Ym5tY0M=
         algorithm: HS256
